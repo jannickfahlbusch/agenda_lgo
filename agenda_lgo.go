@@ -1,12 +1,10 @@
-package main
+package agenda_lgo
 
 import (
 	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -45,6 +43,8 @@ type DocumentResponse []struct {
 type LGO struct {
 	client       *http.Client
 	sessionToken string
+	authFilePath string
+	outDir       string
 }
 
 // URPResponse The response from "Agenda LGO" which contains the session-token
@@ -52,36 +52,12 @@ type URPResponse struct {
 	URP string `json:"urp"`
 }
 
-var (
-	authFilePath string
-	out          string
-)
-
-func init() {
-	flag.StringVar(&authFilePath, "a", ".auth", "Path to the authentication-file")
-	flag.StringVar(&out, "o", "out", "Path to the directory where the files should be stored, must exist")
-}
-
-func main() {
-	flag.Parse()
-
-	lgo := NewLGO()
-	err := lgo.Login()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	documentList, err := lgo.FetchDocumentList()
-
-	for _, doc := range documentList {
-		lgo.SaveDocument(doc)
-	}
-
-}
-
 // NewLGO Instanciates a new LGO-instance
-func NewLGO() *LGO {
-	lgo := &LGO{}
+func NewLGO(authFilePath, outDir string) *LGO {
+	lgo := &LGO{
+		authFilePath: authFilePath,
+		outDir:       outDir,
+	}
 	transport := &http.Transport{}
 	lgo.client = &http.Client{
 		Transport: transport,
@@ -91,36 +67,30 @@ func NewLGO() *LGO {
 }
 
 // SaveDocument Saves the document in the specified out-path
-func (lgo *LGO) SaveDocument(document Document) {
+func (lgo *LGO) SaveDocument(document Document) error {
 	downloadPath := lgo.generateURL(document.DownloadPath + "/" + document.Name)
-
-	log.Printf("Downloading document from %s", downloadPath)
 
 	req, err := http.NewRequest("GET", downloadPath, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	lgo.setHeaders(req)
 
 	resp, err := lgo.client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	defer resp.Body.Close()
 
-	fmt.Printf("%+#v", document)
-	out, err := os.Create(fmt.Sprintf("%s/%d-%s.pdf", out, document.Year, time.Month(document.Month)))
+	out, err := os.Create(fmt.Sprintf("%s/%d-%s.pdf", lgo.outDir, document.Year, time.Month(document.Month)))
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer out.Close()
 
 	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	return err
 }
 
 // FetchDocumentList Fetches the list of all available documents
@@ -149,7 +119,7 @@ func (lgo *LGO) FetchDocumentList() ([]Document, error) {
 
 // generateAuthentication Generates the neccessary reader for the login
 func (lgo *LGO) generateAuthentication() (*strings.Reader, error) {
-	reader, err := os.Open(authFilePath)
+	reader, err := os.Open(lgo.authFilePath)
 	if err != nil {
 		return nil, err
 	}
