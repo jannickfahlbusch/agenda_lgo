@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 const baseURL = "https://agenda-lgo.de/api"
@@ -83,7 +82,7 @@ func (lgo *LGO) SaveDocument(document Document) error {
 
 	defer resp.Body.Close()
 
-	out, err := os.Create(fmt.Sprintf("%s/%d-%s.pdf", lgo.outDir, document.Year, time.Month(document.Month)))
+	out, err := os.Create(fmt.Sprintf("%s/%d-%s.pdf", lgo.outDir, document.Year, document.Month))
 	if err != nil {
 		return err
 	}
