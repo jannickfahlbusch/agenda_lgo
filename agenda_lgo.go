@@ -13,13 +13,13 @@ import (
 
 const baseURL = "https://agenda-lgo.de/api"
 
-// Authentication represents the credentials
+// Authentication is used to login
 type Authentication struct {
 	Email    string
 	Password string
 }
 
-// Document represents one salary statement
+// Represents one salary statement
 type Document struct {
 	Year         int    `json:"year"`
 	Month        int    `json:"month"`
@@ -30,7 +30,7 @@ type Document struct {
 	CreatedAt    int64  `json:"createdAt"`
 }
 
-// DocumentResponse contains general information
+// Contains general information about the employee & employer
 type DocumentResponse []struct {
 	ID            string      `json:"id"`
 	Employee      string      `json:"employee"`
@@ -52,7 +52,7 @@ type URPResponse struct {
 	URP string `json:"urp"`
 }
 
-// NewLGO Instanciates a new LGO-instance
+// Instanciates a new LGO-instance
 func NewLGO(authFilePath, outDir string) *LGO {
 	lgo := &LGO{
 		authFilePath: authFilePath,
@@ -66,7 +66,7 @@ func NewLGO(authFilePath, outDir string) *LGO {
 	return lgo
 }
 
-// SaveDocument Saves the document in the specified out-path
+// Saves the document in the specified out-path
 func (lgo *LGO) SaveDocument(document Document) error {
 	downloadPath := lgo.generateURL(document.DownloadPath + "/" + document.Name)
 
@@ -93,7 +93,7 @@ func (lgo *LGO) SaveDocument(document Document) error {
 	return err
 }
 
-// FetchDocumentList Fetches the list of all available documents
+// Fetches the list of all available documents
 func (lgo *LGO) FetchDocumentList() ([]Document, error) {
 	// Fetch all documents
 	req, err := http.NewRequest("GET", lgo.generateURL("/me/e"), nil)
@@ -117,7 +117,7 @@ func (lgo *LGO) FetchDocumentList() ([]Document, error) {
 	return documentResponse[0].DocumentList, nil
 }
 
-// generateAuthentication Generates the neccessary reader for the login
+// Generates the neccessary reader for the login
 func (lgo *LGO) generateAuthentication() (*strings.Reader, error) {
 	reader, err := os.Open(lgo.authFilePath)
 	if err != nil {
@@ -135,7 +135,7 @@ func (lgo *LGO) generateAuthentication() (*strings.Reader, error) {
 	return strings.NewReader(authStr), nil
 }
 
-// Login Logs into "Agenda: LGO"
+// Authenticates the user with "Agenda: LGO"
 func (lgo *LGO) Login() error {
 	// First login
 
@@ -185,14 +185,14 @@ func (lgo *LGO) Login() error {
 	return nil
 }
 
-// setHeaders Sets the neccessary headers
+// Sets the neccessary headers
 func (lgo *LGO) setHeaders(req *http.Request) {
 	req.Header.Set("Origin", "https://agenda-lgo.de")
 	req.Header.Set("User-Agent", "LGO-Downloader 0.1")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
 }
 
-// generateURl Generates the URL
+// Generates the URL
 func (lgo *LGO) generateURL(method string) string {
 	return baseURL + method + lgo.sessionToken
 }
